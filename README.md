@@ -43,34 +43,44 @@ live Windows session with admin/SYSTEM privileges.
 
 ## How it works (summary)
 
-```
-Windows disk (ro)                                           Linux
-─────────────────────                                       ─────
-SYSTEM/SECURITY hive ──(bootkey, DPAPI_SYSTEM secret)──┐
-Protect\S-1-5-18\User ──────────── SYSTEM masterkeys ──┤
-Protect\<SID> (login pwd) ──────── user masterkeys  ───┼──► keys.json
-                                                       │
-Local State ("APPB…") ─┬ SYSTEM-DPAPI ─┬ user-DPAPI ──┤
-                       │   [93B payload | flag 0x03]  │
-SystemKeys container ──┴ KSP key (entropy'd DPAPI ─────┘
-                         + RSA + XOR + AES-GCM verify)
-                                 │
-                                 ▼
-                        32-byte browser key
-                                 │
-Cookies / "Login Data" (v20 = AEAD) ──► decrypted
-                                 │
-                                 ▼
-          ChromElevator-format JSON (cookies.json / passwords.json)
-                                 │  CDP (remote-debugging)
-                                 ▼
-                 Brave profile (Storage.setCookies,
-                 chrome.passwordsPrivate.addPassword, Bookmarks merge)
+```mermaid
+graph LR
+    subgraph LD["Windows disk — mounted read-only, OS never booted"]
+        HIVES["SYSTEM / SECURITY hives<br/>+ Protect dirs"] --> KEYS["DPAPI masterkeys<br/>(keys.json)"]
+        LOCALSTATE["Local State<br/>os_crypt.app_bound_encrypted_key<br/>(&quot;APPB…&quot;)"]
+        SYSTKEYS["ProgramData/Microsoft/Crypto/SystemKeys<br/>(KSP key container)"]
+        DBS["Cookies / Login Data /<br/>Bookmarks (SQLite + JSON)"]
+    end
+
+    KEYS --> SYS{"SYSTEM-DPAPI"}
+    LOCALSTATE --> SYS
+    SYS --> USR{"user-DPAPI"}
+    USR --> PAYLOAD["93-byte payload<br/>flag 0x03 (Chrome 137+)"]
+    SYSTKEYS --> KSP["KSP key unwrap<br/>RSA + XOR + AES-GCM verify"]
+    PAYLOAD --> KEY["32-byte browser key"]
+    KSP --> KEY
+
+    KEY --> DEC["decrypt v20 blobs"]
+    DBS --> DEC
+
+    subgraph BRAVE["Linux — Brave profile"]
+        IMP["CDP import<br/>Storage.setCookies ·<br/>passwordsPrivate.addPassword<br/>Bookmarks merge"]
+    end
+    DEC --> COOKIES["cookies.json /<br/>passwords.json<br/>(ChromElevator format)"]
+    COOKIES --> IMP
 ```
 
 Full byte-level documentation: [`docs/PIPELINE.md`](docs/PIPELINE.md).
 Brave/webkit-specific issues (empty password manager on KWallet, CDP traps):
 [`docs/BRAVE_TROUBLESHOOTING.md`](docs/BRAVE_TROUBLESHOOTING.md).
+
+## Record or watch a demo
+
+See [`docs/DEMO.md`](docs/DEMO.md): a recipe for a ≤30-second GIF produced
+entirely on synthetic data (IANA example domains, throwaway passwords).
+`scripts/demo_make_inputs.py` builds the fake profile; the importers run
+against a disposable browser profile, so nothing real ever appears on
+screen.
 
 ## Repository layout
 
@@ -85,9 +95,11 @@ scripts/
   convert_passwords.py      optional passwords.json → CSV (UI import)
   merge_bookmarks.py        Chrome Bookmarks JSON → target Bookmarks
   brave_kwalletd_fix.sh     fix for "password manager shows nothing"
+  demo_make_inputs.py       synthetic profile for demo recordings (no real data)
 docs/
   PIPELINE.md               the whole key chain, step by step
   BRAVE_TROUBLESHOOTING.md  pitfalls that cost real debugging time
+  DEMO.md                   how to record a safe demo GIF
 ```
 
 Dependencies (Arch names, equivalents anywhere):
