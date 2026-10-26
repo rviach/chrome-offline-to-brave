@@ -103,11 +103,16 @@ def main():
               flush=True)
     print(f"Finished: added {ok}, rejected {err} (duplicates are shown as errors).")
 
-    # sanity check
-    n = cdp.evaluate(sid, "new Promise(res => "
-                          "chrome.passwordsPrivate.getSavedPasswordList("
-                          "l => res(l.length)))", await_promise=True)
-    print(f"Password manager now reports {n} credential group(s).")
+    # sanity check: the WebUI list loads asynchronously under headless CDP,
+    # so poll until the reported group count stabilizes (up to ~6 s).
+    last = None
+    for _ in range(4):
+        n = cdp.evaluate(sid, "new Promise(res => "
+                              "chrome.passwordsPrivate.getSavedPasswordList("
+                              "l => res(l.length)))", await_promise=True)
+        time.sleep(1.5)
+        last = n
+    print(f"Password manager now reports {last} credential group(s).")
 
     print("Restart the target browser WITHOUT --remote-debugging-port now!")
 
