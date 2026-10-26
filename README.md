@@ -1,5 +1,9 @@
 # chrome-offline-to-brave
 
+![license](https://img.shields.io/badge/license-MIT-blue)
+![platform](https://img.shields.io/badge/platform-Linux-9cf) ![Chrome ABE](https://img.shields.io/badge/Chrome%20ABE-137%2B%20flag%200x03-orange)
+![deps](https://img.shields.io/badge/deps-impacket%20%2B%20pycryptodomex-purple)
+
 Migrate a full Chrome profile — **cookies, saved passwords, bookmarks** —
 from a Windows disk to a Linux Chromium-based browser (Brave), with the
 Windows system **never booted**. The Windows partition is mounted
@@ -160,3 +164,31 @@ these scripts consume and match).
   product. If a decrypt fails, it fails loudly (GCM verification oracle).
 
 MIT licensed. Not affiliated with Google/Brave. Use responsibly.
+
+## FAQ
+
+### How do I migrate Chrome passwords / cookies from a dead or unbootable Windows install?
+
+That is exactly what this repo does. The Windows drive is mounted read-only
+from a Linux live system, all decryption happens offline, and the resulting
+JSONs are imported into the target browser over CDP — see
+[Quick start](#quick-start).
+
+### Brave's password manager is empty after importing passwords
+
+That is the keyring trap: the browser hides rows it cannot decrypt. See
+[the kwalletd section](docs/BRAVE_TROUBLESHOOTING.md#1-password-manager-is-empty-although-login-data-has-200-rows)
+of the troubleshooting doc.
+
+### Which Chrome App-Bound Encryption variants are covered?
+
+Chrome 137+ (`v20` blobs, flag `0x03` AES-256-GCM with the KSP-wrapped
+elevation key) — fully, offline. Older flag `0x01`/`0x02` formats are
+documented in [`docs/PIPELINE.md`](docs/PIPELINE.md#2-the-app-bound-key-chain-local-state--browser-key)
+but not implemented/verified. See also [Status / tested on](#status--tested-on).
+
+### Does Google account sync come along?
+
+No. Brave does not participate in Google sync; data moves locally, account
+state stays server-side. See the [migration table](#what-moves-and-what-doesnt).
+
