@@ -45,17 +45,17 @@ live Windows session with admin/SYSTEM privileges.
 
 ```mermaid
 graph LR
-    subgraph LD["Windows disk — mounted read-only, OS never booted"]
+    subgraph WIN["Windows disk - mounted read-only, OS never booted"]
         HIVES["SYSTEM / SECURITY hives<br/>+ Protect dirs"] --> KEYS["DPAPI masterkeys<br/>(keys.json)"]
-        LOCALSTATE["Local State<br/>os_crypt.app_bound_encrypted_key<br/>(&quot;APPB…&quot;)"]
-        SYSTKEYS["ProgramData/Microsoft/Crypto/SystemKeys<br/>(KSP key container)"]
-        DBS["Cookies / Login Data /<br/>Bookmarks (SQLite + JSON)"]
+        LOCALSTATE["Local State<br/>os_crypt.app_bound_encrypted_key<br/>APPB blob"]
+        SYSTKEYS["ProgramData/Microsoft/Crypto/SystemKeys<br/>KSP key container"]
+        DBS["Cookies / Login Data /<br/>Bookmarks"]
     end
 
     KEYS --> SYS{"SYSTEM-DPAPI"}
     LOCALSTATE --> SYS
     SYS --> USR{"user-DPAPI"}
-    USR --> PAYLOAD["93-byte payload<br/>flag 0x03 (Chrome 137+)"]
+    USR --> PAYLOAD["93-byte payload<br/>flag 0x03, Chrome 137+"]
     SYSTKEYS --> KSP["KSP key unwrap<br/>RSA + XOR + AES-GCM verify"]
     PAYLOAD --> KEY["32-byte browser key"]
     KSP --> KEY
@@ -63,10 +63,10 @@ graph LR
     KEY --> DEC["decrypt v20 blobs"]
     DBS --> DEC
 
-    subgraph BRAVE["Linux — Brave profile"]
-        IMP["CDP import<br/>Storage.setCookies ·<br/>passwordsPrivate.addPassword<br/>Bookmarks merge"]
+    subgraph LINUX["Linux - Brave profile"]
+        IMP["CDP import<br/>Storage.setCookies<br/>passwordsPrivate.addPassword<br/>Bookmarks merge"]
     end
-    DEC --> COOKIES["cookies.json /<br/>passwords.json<br/>(ChromElevator format)"]
+    DEC --> COOKIES["cookies.json / passwords.json<br/>ChromElevator format"]
     COOKIES --> IMP
 ```
 
