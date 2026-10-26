@@ -68,9 +68,15 @@ Keep it under ~30 seconds — that is the whole point of a README demo.
 
 ## 6. Honest-labeling note (important)
 
-The GIF shows the **import/migration half** faithfully (that is real code
-doing real work). The **decryption half** (`chrome_ab_chain.py`)
-requires actual Windows DPAPI artifacts and cannot be re-run — its demo
-would need a "reconstructed transcript" clearly captioned as such, or
-`screenshot-style` before/after console output described in text. Do not
-present a scripted replay as a live run.
+A demo has already been recorded this way: `docs/demo.gif` shows the
+**import/migration half faithfully** — the GIF was produced from the
+verbatim stdout of the real scripts running against a disposable headless
+Brave profile with the synthetic inputs above (`agg`-free pipeline:
+ghostscript-rendered frames + ffmpeg). Long "restart the browser" notice
+lines were trimmed for length; nothing else was changed, and prompts are
+echoed as the commands that actually ran.
+
+The **decryption half** (`chrome_ab_chain.py`) requires actual Windows
+DPAPI artifacts and cannot be re-run — its demo would need a
+"reconstructed transcript" clearly captioned as such. Do not present a
+scripted replay as a live run.

@@ -30,6 +30,11 @@ live Windows session with admin/SYSTEM privileges.
 > **No personal data is published here**: no usernames, URLs, key material
 > or identifiers from the original run — only counts and formats.
 
+![demo](docs/demo.gif)
+*Real run of the importers against a disposable headless Brave profile,
+using only synthetic data — recipe and honesty notes in
+[`docs/DEMO.md`](docs/DEMO.md).*
+
 ## What moves and what doesn't
 
 | Data | Migrates? | Notes |
