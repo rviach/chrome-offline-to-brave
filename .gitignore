@@ -1,0 +1,14 @@
+# decryption outputs — NEVER commit these
+keys.json
+*cookies.json
+*passwords.json
+passwords_import.csv
+out/
+*.db
+*.db-wal
+*.db-shm
+
+# python
+__pycache__/
+*.pyc
+.venv/
