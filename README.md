@@ -30,11 +30,6 @@ live Windows session with admin/SYSTEM privileges.
 > **No personal data is published here**: no usernames, URLs, key material
 > or identifiers from the original run — only counts and formats.
 
-![demo](docs/demo.gif)
-*Real run of the importers against a disposable headless Brave profile,
-using only synthetic data — recipe and honesty notes in
-[`docs/DEMO.md`](docs/DEMO.md).*
-
 ## What moves and what doesn't
 
 | Data | Migrates? | Notes |
@@ -79,14 +74,6 @@ Full byte-level documentation: [`docs/PIPELINE.md`](docs/PIPELINE.md).
 Brave/webkit-specific issues (empty password manager on KWallet, CDP traps):
 [`docs/BRAVE_TROUBLESHOOTING.md`](docs/BRAVE_TROUBLESHOOTING.md).
 
-## Record or watch a demo
-
-See [`docs/DEMO.md`](docs/DEMO.md): a recipe for a ≤30-second GIF produced
-entirely on synthetic data (IANA example domains, throwaway passwords).
-`scripts/demo_make_inputs.py` builds the fake profile; the importers run
-against a disposable browser profile, so nothing real ever appears on
-screen.
-
 ## Repository layout
 
 ```
@@ -100,11 +87,9 @@ scripts/
   convert_passwords.py      optional passwords.json → CSV (UI import)
   merge_bookmarks.py        Chrome Bookmarks JSON → target Bookmarks
   brave_kwalletd_fix.sh     fix for "password manager shows nothing"
-  demo_make_inputs.py       synthetic profile for demo recordings (no real data)
 docs/
   PIPELINE.md               the whole key chain, step by step
   BRAVE_TROUBLESHOOTING.md  pitfalls that cost real debugging time
-  DEMO.md                   how to record a safe demo GIF
 ```
 
 Dependencies (Arch names, equivalents anywhere):
