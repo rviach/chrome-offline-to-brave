@@ -43,7 +43,28 @@ What appears on screen, and why it is demo gold:
 
 ## 4. Capture
 
-Terminal-only version (recommended for a README):
+### Option A — vhs (recommended; this is how `docs/demo.gif` was made)
+
+One-off setup (no root): put the `vhs` and `ttyd` release binaries and the
+fonts vhs wants (e.g. JetBrains Mono / Hack) into `~/.local/bin` and
+`~/.local/share/fonts`.
+
+`docs/demo.tape` records the whole thing:
+
+```sh
+# terminal only, headless browser must be up on port 9222 first:
+brave --headless=new --user-data-dir=/tmp/demo-profile \
+      --remote-debugging-port=9222 --no-first-run &
+vhs docs/demo.tape            # → docs/demo.gif (~200 KB, Dracula, Rings)
+pkill -f demo-profile         # clean up the disposable browser
+```
+
+The tape echoes and runs the real commands (typewriter pacing included),
+so the GIF is a genuine run, not an animation.
+
+### Option B — plain terminal capture
+
+Terminal-only version:
 
 ```sh
 asciinema rec demo.cast          # run section 2+3 inside
