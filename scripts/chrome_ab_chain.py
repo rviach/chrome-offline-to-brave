@@ -52,7 +52,7 @@ CHROME_EPOCH_DIFF = 11644473600
 def dpapi_blob_decrypt(blob_bytes, keys_by_guid, entropy=None):
     """Decrypt one DPAPI blob using a {masterkey-guid: masterkey-bytes} map."""
     blob = DPAPI_BLOB(blob_bytes)
-    guid = bin_to_string(blob["GuidMasterKey"])
+    guid = bin_to_string(blob["GuidMasterKey"]).lower()
     key = keys_by_guid.get(guid)
     if key is None:
         return None
@@ -80,14 +80,40 @@ def scan_ksp_containers(ksp_dir, sys_keys, entropy=KSP_ENTROPY):
         except OSError:
             continue
         off = 0
+        seen = set()
         while True:
             off = data.find(DPAPI_BLOB_MAGIC, off)
             if off < 0:
                 break
-            #(blob length is inside the blob; decrypt what's left)
-            plain = dpapi_blob_decrypt(data[off:], sys_keys, entropy)
-            if plain is not None:
-                yield path, plain
+            for ent in (entropy, None):
+                plain = dpapi_blob_decrypt(data[off:], sys_keys, ent)
+                if plain is not None:
+                    seen.add(off)
+                    yield path, plain
+                    break
+            off += 1
+        # KSP export containers may use a non-1 version field before the
+        # provider GUID, so also scan for the GUID alone (case: d42cc…key)
+        off = 0
+        while True:
+            off = data.find(bytes.fromhex("d08c9ddf"), off)
+            if off < 0:
+                break
+            start = off - 20  # typical DPAPI_BLOB leading header
+            if start < 0:
+                off += 1
+                continue
+            for ent in (entropy, None):
+                if len(data) - start < 128:  # too short to be a DPAPI blob
+                    break
+                try:
+                    plain = dpapi_blob_decrypt(data[start:], sys_keys, ent)
+                except Exception:
+                    plain = None
+                if plain is not None and start not in seen:
+                    seen.add(start)
+                    yield path, plain
+                    break
             off += 1
 
 
@@ -96,6 +122,11 @@ def rsa_wrap_unwrap(enc_key32, containers):
     an RSA PRIVATEKEYBLOB; emulate NCryptDecrypt of the 32-byte wrapped key."""
     for path, blob in containers:
         i = blob.find(PRIVKEYBLOB_MAGIC)
+        if i < 0 and blob[:4] == b"RSA2":
+            # KSP export stores a bare RSAPUBKEY blob ("RSA2"…) without the
+            # 8-byte PUBLICKEYSTRUC header; re-attach it (CALG_RSA_KEYX).
+            blob = bytes((0x07, 0x02, 0x00, 0x00)) + struct.pack("<I", 0x0000A400) + blob
+            i = 0
         if i < 0:
             continue
         try:
@@ -167,6 +198,18 @@ def recover_browser_key(payload93, sys_keys, ksp_dir):
                               iv=b"\x00" * 16).decrypt(enc_key)[:32]
                 key = bytes(a ^ b for a, b in zip(dec, XOR_KEY))
                 strategies.append(("KSP-DPAPI AES-CBC0+XOR", key, path))
+        if blob[:4] == b"KDBM" and len(blob) >= 44:
+            # BCRYPT_KEY_DATA_BLOB: magic(4) ver(4) cbKeyData(4) key...
+            # (verified recipe, aabston 2026 / SpecterOps 2025)
+            cb = int.from_bytes(blob[8:12], "little")
+            ksp_key = blob[12:12 + cb]
+            key = bytes(a ^ b for a, b in zip(ksp_key, XOR_KEY))
+            strategies.append(("KDBM direct-XOR", key, path))
+            if len(enc_key) % 16 == 0:
+                dec = AES.new(ksp_key, AES.MODE_CBC,
+                              iv=b"\x00" * 16).decrypt(enc_key)[:32]
+                key = bytes(a ^ b for a, b in zip(dec, XOR_KEY))
+                strategies.append(("KDBM AES-CBC0+XOR", key, path))
 
     for name, key, src in strategies:
         plain = gcm_try(key, iv, ct_tag)
@@ -211,12 +254,12 @@ def recover_app_bound_key(local_state_path, keys_json, ksp_dir):
 # ------------------------------------------------------------- data decrypt
 def gcm_decrypt(key, data):
     """v20 = b'v20' | nonce12 | ct | tag16. Returns plaintext bytes or None."""
-    if len(data) < 3 + 12 + 16 or not data.startswith(b"v20"):
+    if len(data) < 3 + 12 + 20 or not data.startswith(b"v20"):
         return None
-    nonce, ct = data[3:15], data[15:-16]
+    nonce, body = data[3:15], data[15:]
     try:
         return AES.new(key, AES.MODE_GCM, nonce=nonce).decrypt_and_verify(
-            ct[:-16], ct[-16:])
+            body[:-16], body[-16:])
     except (ValueError, KeyError):
         return None
 
